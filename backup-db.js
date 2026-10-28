@@ -3,10 +3,15 @@
 //         node backup-db.js my_copy.sql    -> writes to the file name you give
 // Restore: node setup-db.js --reset --from popmart_backup.sql
 // Uses the same settings as db.js (.env). No pg_dump needed.
-require('dotenv').config({ quiet: true });
-const fs = require('fs');
-const path = require('path');
-const { Client } = require('pg');
+import dotenv from 'dotenv';
+dotenv.config({ quiet: true });
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import pg from 'pg';
+
+const { Client } = pg;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // parent tables first, so the INSERTs satisfy the foreign keys
 const TABLES = ['series', 'members', 'products', 'orders', 'order_items'];

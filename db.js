@@ -1,7 +1,9 @@
 // db.js - PostgreSQL connection (shared pool)
 // Reads settings from .env (see the variable names below)
-require('dotenv').config({ quiet: true });
-const { Pool } = require('pg');
+import dotenv from 'dotenv';
+dotenv.config({ quiet: true });
+import pg from 'pg';
+const { Pool } = pg;
 
 const pool = new Pool(
   process.env.DATABASE_URL
@@ -26,4 +28,4 @@ async function testConnection() {
   return result.rows[0].server_time;
 }
 
-module.exports = { pool, testConnection };
+export { pool, testConnection };

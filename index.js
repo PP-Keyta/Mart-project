@@ -1,8 +1,12 @@
 // index.js - main entry point (Express server)
-require('dotenv').config({ quiet: true });
-const express = require('express');
-const cors = require('cors');
-const { testConnection } = require('./db');
+import dotenv from 'dotenv';
+import express from 'express';
+import cors from 'cors';
+import { testConnection } from './db.js';
+import productsRouter from './routes/products.js';
+import seriesRouter from './routes/series.js';
+
+dotenv.config({ quiet: true });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,11 +30,11 @@ app.get('/health', async (req, res) => {
   }
 });
 
-app.use('/api/products', require('./routes/products'));
-app.use('/api/series', require('./routes/series'));
+app.use('/api/products', productsRouter);
+app.use('/api/series', seriesRouter);
 
 // TODO: mount the next feature routes here, e.g.
-// app.use('/api/auth', require('./routes/auth'));
+// app.use('/api/auth', authRouter);  // import authRouter from './routes/auth.js'
 
 // ---------- 404 + error handling ----------
 app.use((req, res) => {

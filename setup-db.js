@@ -2,10 +2,15 @@
 // Usage:  node setup-db.js            (first time)
 //         node setup-db.js --reset    (DROPS all tables and loads them again)
 // Uses the same settings as db.js (.env): DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
-require('dotenv').config({ quiet: true });
-const fs = require('fs');
-const path = require('path');
-const { Client } = require('pg');
+import dotenv from 'dotenv';
+dotenv.config({ quiet: true });
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import pg from 'pg';
+
+const { Client } = pg;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const cfg = {
   host: process.env.DB_HOST || 'localhost',

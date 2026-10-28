@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Pop Mart shop - backend (Node.js + Express + PostgreSQL)",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"

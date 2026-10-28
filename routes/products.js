@@ -1,8 +1,8 @@
 // routes/products.js - read-only product endpoints
 //   GET /api/products        list with search / filter / sort / paging
 //   GET /api/products/:id    one product
-const express = require('express');
-const { pool } = require('../db');
+import express from 'express';
+import { pool } from '../db.js';
 
 const router = express.Router();
 
@@ -92,4 +92,4 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-module.exports = router;
+export default router;
