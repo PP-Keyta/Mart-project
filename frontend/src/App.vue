@@ -11,7 +11,8 @@
       <!-- ช่องค้นหา -->
       <div class="search">
         <input type="text" v-model="searchQuery" @keyup.enter="handleSearch" placeholder="ค้นหาสินค้า / คอลเล็กชัน...">
-        🔍
+        <!-- กดไอคอนแว่นขยายเพื่อค้นหา (เหมือนกดปุ่ม Enter) -->
+        <button type="button" class="ib" style="padding:0" @click="handleSearch" aria-label="ค้นหา">🔍</button>
       </div>
       
       <!-- ไอคอนโปรไฟล์ และ ตะกร้า -->
@@ -29,18 +30,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 
 const router = useRouter()
+const route = useRoute()
 const cartCount = ref(0) // ตัวแปรเก็บจำนวนสินค้าในตะกร้า
 const searchQuery = ref('')
+
+// ให้ช่องค้นหาตรงกับคำค้นใน URL เสมอ (เช่น กด Back หรือออกจากหน้าสินค้า)
+watch(() => route.query.q, (q) => { searchQuery.value = q || '' }, { immediate: true })
 
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
     // ถ้ามีการพิมพ์คำค้นหา ให้พาไปหน้าสินค้าและแนบคำค้นหาไปที่ URL
-    router.push({ path: '/products', query: { q: searchQuery.value } })
+    router.push({ path: '/products', query: { q: searchQuery.value.trim() } })
   } else {
     // ถ้าช่องว่างเปล่า ให้ไปหน้าสินค้าแบบแสดงทั้งหมด
     router.push('/products')

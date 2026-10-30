@@ -48,6 +48,8 @@ onMounted(async () => {
     products.value = res.data.data // หรือปรับตามโครงสร้าง JSON ที่ Backend ส่งกลับมา
     const seriesRes = await axios.get('http://localhost:3000/api/series')
     seriesList.value = seriesRes.data.data
+    // มาจากหน้าแรก (กดหมวดหมู่) : /products?series=ID --> เลือกหมวดนั้นให้เลย
+    if (route.query.series) cat.value = Number(route.query.series)
   } catch (err) {
     console.error('ไม่สามารถดึงข้อมูลสินค้าได้:', err.message)
   }
