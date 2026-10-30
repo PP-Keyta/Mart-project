@@ -83,7 +83,8 @@ export async function postMember(req, res) {
     const bodyData = req.body
     try {
         // ตรวจสอบ email, name และ password
-        if (!bodyData.email || !bodyData.name || !bodyData.password) {
+        // name ที่เป็นช่องว่างล้วนถือว่าไม่ได้กรอก
+        if (!bodyData.email || !String(bodyData.name || '').trim() || !bodyData.password) {
             return res.status(400).json({ message: `ERROR email, name and password is required.`, regist: false })
         }
         // รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร
@@ -508,5 +509,107 @@ export async function putMemberRole(req, res) {
         if (err.name.includes('Token'))
             return res.status(401).json({ message: `The information was falsified.`, login: false })
         return res.status(500).json({ message: err.message })
+    }
+}
+
+// ----------------------------------------------------------------------
+// ที่อยู่จัดส่งเพิ่มเติม (นอกจากที่อยู่หลักใน members.address) : ใช้ได้เฉพาะเจ้าของบัญชี
+//   GET    /members/addresses       รายการที่อยู่เพิ่มเติมของตัวเอง
+//   POST   /members/addresses       เพิ่มที่อยู่ { address }
+//   PUT    /members/addresses/:id   แก้ไขที่อยู่ { address }
+//   DELETE /members/addresses/:id   ลบที่อยู่
+// ใช้ req.user ที่ readToken (index.js) ใส่ไว้ให้ ถ้าไม่ได้ login ตอบ 401
+// ----------------------------------------------------------------------
+const maxAddresses = 10    // จำกัดจำนวนที่อยู่เพิ่มเติมต่อสมาชิก
+const maxAddressLen = 500  // ความยาวสูงสุดของที่อยู่ 1 รายการ
+
+export async function getAddresses(req, res) {
+    console.log(`GET /members/addresses is requested.`)
+    if (!req.user)
+        return res.status(401).json({ message: `Please login`, ok: false })
+    try {
+        const result = await database.query({
+            text: `SELECT id, address, created_at FROM member_addresses WHERE member_id = $1 ORDER BY id`,
+            values: [req.user.id]
+        })
+        res.json({ message: `Get addresses Success`, ok: true, addresses: result.rows })
+    }
+    catch (err) {
+        return res.status(500).json({ message: err.message, ok: false })
+    }
+}
+
+export async function postAddress(req, res) {
+    console.log(`POST /members/addresses is requested.`)
+    if (!req.user)
+        return res.status(401).json({ message: `Please login`, ok: false })
+    const address = String(req.body.address || '').trim()
+    if (!address)
+        return res.status(400).json({ message: `ERROR address is required.`, ok: false })
+    if (address.length > maxAddressLen)
+        return res.status(400).json({ message: `ERROR address must be at most ${maxAddressLen} characters.`, ok: false })
+    try {
+        const count = await database.query({
+            text: `SELECT count(*)::int AS n FROM member_addresses WHERE member_id = $1`,
+            values: [req.user.id]
+        })
+        if (count.rows[0].n >= maxAddresses)
+            return res.status(400).json({ message: `ERROR you can add at most ${maxAddresses} extra addresses.`, ok: false })
+        const result = await database.query({
+            text: `INSERT INTO member_addresses (member_id, address) VALUES ($1, $2) RETURNING id, address, created_at`,
+            values: [req.user.id, address]
+        })
+        res.status(201).json({ message: `Add address Success`, ok: true, address: result.rows[0] })
+    }
+    catch (err) {
+        return res.status(500).json({ message: err.message, ok: false })
+    }
+}
+
+export async function putAddress(req, res) {
+    console.log(`PUT /members/addresses/${req.params.id} is requested.`)
+    if (!req.user)
+        return res.status(401).json({ message: `Please login`, ok: false })
+    if (!/^\d+$/.test(req.params.id))
+        return res.status(400).json({ message: `id must be a number`, ok: false })
+    const address = String(req.body.address || '').trim()
+    if (!address)
+        return res.status(400).json({ message: `ERROR address is required.`, ok: false })
+    if (address.length > maxAddressLen)
+        return res.status(400).json({ message: `ERROR address must be at most ${maxAddressLen} characters.`, ok: false })
+    try {
+        // เงื่อนไข member_id ทำให้แก้ได้เฉพาะที่อยู่ของตัวเอง
+        const result = await database.query({
+            text: `UPDATE member_addresses SET address = $1
+                   WHERE id = $2 AND member_id = $3
+                   RETURNING id, address, created_at`,
+            values: [address, Number(req.params.id), req.user.id]
+        })
+        if (result.rowCount == 0)
+            return res.status(404).json({ message: `Address not found`, ok: false })
+        res.json({ message: `Update address Success`, ok: true, address: result.rows[0] })
+    }
+    catch (err) {
+        return res.status(500).json({ message: err.message, ok: false })
+    }
+}
+
+export async function deleteAddress(req, res) {
+    console.log(`DELETE /members/addresses/${req.params.id} is requested.`)
+    if (!req.user)
+        return res.status(401).json({ message: `Please login`, ok: false })
+    if (!/^\d+$/.test(req.params.id))
+        return res.status(400).json({ message: `id must be a number`, ok: false })
+    try {
+        const result = await database.query({
+            text: `DELETE FROM member_addresses WHERE id = $1 AND member_id = $2`,
+            values: [Number(req.params.id), req.user.id]
+        })
+        if (result.rowCount == 0)
+            return res.status(404).json({ message: `Address not found`, ok: false })
+        res.json({ message: `Delete address Success`, ok: true })
+    }
+    catch (err) {
+        return res.status(500).json({ message: err.message, ok: false })
     }
 }

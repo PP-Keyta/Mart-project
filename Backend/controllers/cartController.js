@@ -301,7 +301,8 @@ export async function checkoutCart(req, res, next) {
         // 4. เปลี่ยนสถานะ order เป็น confirmed
         const updateOrderQuery = `
             UPDATE "orders" 
-            SET "status" = 'confirmed', "confirmed_at" = NOW() 
+            SET "status" = 'confirmed', "confirmed_at" = NOW(),
+                "total_amount" = (SELECT COALESCE(SUM(qty * unit_price), 0) FROM "order_items" WHERE "order_id" = $1)
             WHERE "id" = $1 
             RETURNING id, order_no, member_id, status, total_amount, created_at, confirmed_at
         `;

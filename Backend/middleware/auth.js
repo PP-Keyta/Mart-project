@@ -2,6 +2,7 @@
 // ใช้ให้ส่วนอื่นของระบบ (เช่น cartController ที่อ่าน req.user.id) รู้ว่าใคร login อยู่
 // หมายเหตุ: ฟังก์ชันของสมาชิก (memberController) ตรวจ Token ในตัวเองอยู่แล้ว ไม่ได้พึ่งไฟล์นี้
 import jwt from "jsonwebtoken"
+import database from "../services/db.js"
 
 // อ่าน Token จาก Header Authorization: Bearer <token> หรือ Cookie ชื่อ token
 // ถ้ามีทั้งสองอย่าง ใช้ Header ก่อน (ผู้เรียกระบุตัวตนชัดเจนกว่า Cookie ที่ Browser แนบให้เอง)
@@ -22,4 +23,28 @@ export function readToken(req, res, next) {
         }
     }
     next()
+}
+
+// ตรวจว่าผู้เรียกเป็น admin ที่ยัง active อยู่ (อ่านสิทธิ์จากฐานข้อมูลทุกครั้ง ไม่เชื่อ role ใน Token)
+export async function isAdmin(req) {
+    if (!req.user) return false
+    const result = await database.query({
+        text: `SELECT role, status FROM members WHERE id = $1`,
+        values: [req.user.id]
+    })
+    return result.rowCount != 0 && result.rows[0].role == 'admin' && result.rows[0].status == 'active'
+}
+
+// ใช้กั้น route ที่ให้เฉพาะ admin (เช่น เพิ่ม/แก้/ลบสินค้า) : ไม่ login --> 401, ไม่ใช่ admin --> 403
+export async function requireAdmin(req, res, next) {
+    if (!req.user)
+        return res.status(401).json({ message: `Please login` })
+    try {
+        if (!(await isAdmin(req)))
+            return res.status(403).json({ message: `Admin only` })
+        next()
+    }
+    catch (err) {
+        res.status(500).json({ message: err.message })
+    }
 }

@@ -8,7 +8,10 @@
           <table>
           <tr><th>สินค้า</th><th>ราคา</th><th>จำนวน</th><th>ราคารวม</th><th>ลบ</th></tr>
           <tr><td colspan="5"><label style="color:var(--pink);cursor:pointer">
-            <input type="checkbox" :checked="allSel" @change="toggleAll($event.target.checked)"> เลือกทั้งหมด</label></td></tr>
+            <input type="checkbox" :checked="allSel" @change="toggleAll($event.target.checked)"> เลือกทั้งหมด</label>
+            <!-- ลบรายการที่ติ๊กเลือกไว้ทีเดียวหลายรายการ -->
+            <button class="btn" style="margin-left:16px;padding:6px 14px" :disabled="busy || !sel.length"
+              :style="{opacity:sel.length?1:.5}" @click="removeSelected">🗑️ ลบที่เลือก ({{sel.length}})</button></td></tr>
           <tr v-for="it in cart" :key="it.id">
             <td>
               <div style="display:flex;gap:12px;align-items:center">
@@ -133,7 +136,19 @@ const dec = (it) => {
 // ลบสินค้า : DELETE /api/cart/items/:id
 const remove = (id) => run(() => axios.delete(API + '/api/cart/items/' + id))
 
-const toggleAll = (val) => cart.value.forEach(i => i.sel = val)
+// ลบหลายรายการ : เรียก DELETE ทีละรายการตามลำดับ (ไม่ยิงพร้อมกัน เพราะรายการสุดท้ายที่ลบจะลบตะกร้าทิ้งด้วย)
+const removeSelected = async () => {
+  const items = sel.value
+  if (!items.length) return
+  if (!confirm(`ลบสินค้าที่เลือก ${items.length} รายการออกจากตะกร้าหรือไม่?`)) return
+  await run(async () => {
+    for (const it of items) {
+      await axios.delete(API + '/api/cart/items/' + it.id)
+    }
+  })
+}
+
+const toggleAll =(val) => cart.value.forEach(i => i.sel = val)
 
 // สั่งซื้อ : Backend ยืนยันทั้งตะกร้า จึงนำรายการที่ไม่ได้เลือกออกก่อน (ถามยืนยันก่อน)
 const order = async () => {
