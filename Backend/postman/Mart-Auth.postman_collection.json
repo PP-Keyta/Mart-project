@@ -2,7 +2,7 @@
   "info": {
     "name": "Mart - Auth (members)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Run the whole collection (Collection Runner) with the backend running on {{baseUrl}}. Registers a new autotest_* account each run."
+    "description": "Run the whole collection (Collection Runner) with the backend running on {{baseUrl}}. The Backend answers with the proper HTTP status (200/201/400/401/403/404/409) and also tells success/failure with login/regist/update/upload and message in the body. Registers a new autotest_* account each run (delete them afterwards)."
   },
   "item": [
     {
@@ -27,9 +27,10 @@
                 "exec": [
                   "pm.test(\"status is 201\", () => pm.response.to.have.status(201))",
                   "const j = pm.response.json()",
-                  "pm.test(\"regist is true\", () => pm.expect(j.regist).to.eql(true))",
+                  "pm.test(\"regist is true\", () => pm.expect(pm.response.json().regist).to.eql(true))",
                   "pm.test(\"role is member (admin request ignored)\", () => pm.expect(j.role).to.eql(\"member\"))",
-                  "pm.test(\"no password in response\", () => { pm.expect(j).to.not.have.property(\"password\"); pm.expect(j).to.not.have.property(\"password_hash\") })"
+                  "pm.test(\"no password in response\", () => { pm.expect(j).to.not.have.property(\"password\"); pm.expect(j).to.not.have.property(\"password_hash\") })",
+                  "pm.collectionVariables.set(\"newId\", j.id)"
                 ]
               }
             }
@@ -75,7 +76,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 409\", () => pm.response.to.have.status(409))",
-                  "pm.test(\"regist is false\", () => pm.expect(pm.response.json().regist).to.eql(false))"
+                  "pm.test(\"regist is false\", () => pm.expect(pm.response.json().regist).to.eql(false))",
+                  "pm.test(\"message has: is exists\", () => pm.expect(pm.response.json().message).to.include(\"is exists\"))"
                 ]
               }
             }
@@ -121,7 +123,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 400\", () => pm.response.to.have.status(400))",
-                  "pm.test(\"regist is false\", () => pm.expect(pm.response.json().regist).to.eql(false))"
+                  "pm.test(\"regist is false\", () => pm.expect(pm.response.json().regist).to.eql(false))",
+                  "pm.test(\"message has: at least 8\", () => pm.expect(pm.response.json().message).to.include(\"at least 8\"))"
                 ]
               }
             }
@@ -167,7 +170,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 400\", () => pm.response.to.have.status(400))",
-                  "pm.test(\"regist is false\", () => pm.expect(pm.response.json().regist).to.eql(false))"
+                  "pm.test(\"regist is false\", () => pm.expect(pm.response.json().regist).to.eql(false))",
+                  "pm.test(\"message has: required\", () => pm.expect(pm.response.json().message).to.include(\"required\"))"
                 ]
               }
             }
@@ -219,7 +223,8 @@
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
                   "const j = pm.response.json()",
-                  "pm.test(\"login is true and has token\", () => { pm.expect(j.login).to.eql(true); pm.expect(j.token).to.be.a(\"string\") })",
+                  "pm.test(\"login is true\", () => pm.expect(pm.response.json().login).to.eql(true))",
+                  "pm.test(\"has token\", () => pm.expect(j.token).to.be.a(\"string\"))",
                   "pm.test(\"member has id/email/role, no hash\", () => { pm.expect(j.member).to.include.keys(\"id\",\"email\",\"role\"); pm.expect(j.member).to.not.have.property(\"password_hash\") })",
                   "pm.test(\"sets httpOnly cookie\", () => { const c = pm.response.headers.get(\"Set-Cookie\") || \"\"; pm.expect(c).to.include(\"token=\"); pm.expect(c).to.include(\"HttpOnly\") })",
                   "pm.collectionVariables.set(\"token\", j.token)"
@@ -269,7 +274,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
-                  "pm.test(\"login is true\", () => pm.expect(pm.response.json().login).to.eql(true))"
+                  "pm.test(\"login is true\", () => pm.expect(pm.response.json().login).to.eql(true))",
+                  "pm.collectionVariables.set(\"newToken\", pm.response.json().token)"
                 ]
               }
             }
@@ -317,6 +323,7 @@
                 "exec": [
                   "pm.test(\"status is 401\", () => pm.response.to.have.status(401))",
                   "pm.test(\"login is false\", () => pm.expect(pm.response.json().login).to.eql(false))",
+                  "pm.test(\"message has: Login Fail\", () => pm.expect(pm.response.json().message).to.include(\"Login Fail\"))",
                   "pm.collectionVariables.set(\"failMsg\", pm.response.json().message)"
                 ]
               }
@@ -364,6 +371,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 401\", () => pm.response.to.have.status(401))",
+                  "pm.test(\"login is false\", () => pm.expect(pm.response.json().login).to.eql(false))",
                   "pm.test(\"same message as wrong password\", () => pm.expect(pm.response.json().message).to.eql(pm.collectionVariables.get(\"failMsg\")))"
                 ]
               }
@@ -411,7 +419,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 400\", () => pm.response.to.have.status(400))",
-                  "pm.test(\"login is false\", () => pm.expect(pm.response.json().login).to.eql(false))"
+                  "pm.test(\"login is false\", () => pm.expect(pm.response.json().login).to.eql(false))",
+                  "pm.test(\"message has: required\", () => pm.expect(pm.response.json().message).to.include(\"required\"))"
                 ]
               }
             }
@@ -458,7 +467,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 401\", () => pm.response.to.have.status(401))",
-                  "pm.test(\"not logged in\", () => pm.expect(pm.response.json().login).to.eql(false))"
+                  "pm.test(\"login is false\", () => pm.expect(pm.response.json().login).to.eql(false))"
                 ]
               }
             }
@@ -510,8 +519,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
-                  "const j = pm.response.json()",
-                  "pm.test(\"returns somchai\", () => { pm.expect(j.email).to.eql(\"somchai@example.com\"); pm.expect(j.login).to.eql(true) })"
+                  "pm.test(\"login is true\", () => pm.expect(pm.response.json().login).to.eql(true))",
+                  "pm.test(\"returns somchai\", () => pm.expect(pm.response.json().email).to.eql(\"somchai@example.com\"))"
                 ]
               }
             }
@@ -543,6 +552,38 @@
           }
         },
         {
+          "name": "(clear cookie) logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
           "name": "Detail - no token",
           "event": [
             {
@@ -551,7 +592,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 401\", () => pm.response.to.have.status(401))",
-                  "pm.test(\"login is false\", () => pm.expect(pm.response.json().login).to.eql(false))"
+                  "pm.test(\"login is false\", () => pm.expect(pm.response.json().login).to.eql(false))",
+                  "pm.test(\"message has: No member\", () => pm.expect(pm.response.json().message).to.include(\"No member\"))"
                 ]
               }
             }
@@ -584,7 +626,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 401\", () => pm.response.to.have.status(401))",
-                  "pm.test(\"login is false\", () => pm.expect(pm.response.json().login).to.eql(false))"
+                  "pm.test(\"login is false\", () => pm.expect(pm.response.json().login).to.eql(false))",
+                  "pm.test(\"message has: falsified\", () => pm.expect(pm.response.json().message).to.include(\"falsified\"))"
                 ]
               }
             }
@@ -611,45 +654,6 @@
                 "api",
                 "members",
                 "detail"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Cart - member taken from token (no member_id)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
-                  "pm.test(\"not asking for member_id\", () => pm.expect(JSON.stringify(pm.response.json())).to.not.include(\"member_id is required\"))"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/cart",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "cart"
               ]
             }
           }
@@ -689,6 +693,1795 @@
           }
         }
       ]
+    },
+    {
+      "name": "4. Edit own profile",
+      "item": [
+        {
+          "name": "Login - admin (saves adminToken, adminId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
+                  "pm.test(\"role is admin\", () => pm.expect(pm.response.json().member.role).to.eql(\"admin\"))",
+                  "pm.collectionVariables.set(\"adminToken\", pm.response.json().token)",
+                  "pm.collectionVariables.set(\"adminId\", pm.response.json().member.id)"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@popmart.test\",\n  \"password\": \"Passw0rd!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "(clear cookie) logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /members - no token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401))",
+                  "pm.test(\"update is false\", () => pm.expect(pm.response.json().update).to.eql(false))",
+                  "pm.test(\"message has: Please login\", () => pm.expect(pm.response.json().message).to.include(\"Please login\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /members - empty body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400))",
+                  "pm.test(\"update is false\", () => pm.expect(pm.response.json().update).to.eql(false))",
+                  "pm.test(\"message has: required\", () => pm.expect(pm.response.json().message).to.include(\"required\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /members - blank name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400))",
+                  "pm.test(\"update is false\", () => pm.expect(pm.response.json().update).to.eql(false))",
+                  "pm.test(\"message has: name is required\", () => pm.expect(pm.response.json().message).to.include(\"name is required\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"   \"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /members - success (ignores role/email)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
+                  "const j = pm.response.json()",
+                  "pm.test(\"update is true\", () => pm.expect(pm.response.json().update).to.eql(true))",
+                  "pm.test(\"fields updated\", () => { pm.expect(j.name).to.eql(\"Edited Name\"); pm.expect(j.phone).to.eql(\"0812345678\"); pm.expect(j.address).to.eql(\"1 Test Road\") })",
+                  "pm.test(\"role and email unchanged\", () => { pm.expect(j.role).to.eql(\"member\"); pm.expect(j.email).to.eql(pm.collectionVariables.get(\"newEmail\")) })"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Edited Name\",\n  \"phone\": \"0812345678\",\n  \"address\": \"1 Test Road\",\n  \"role\": \"admin\",\n  \"email\": \"hacker@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detail - shows edited data from DB",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
+                  "pm.test(\"name is Edited Name\", () => pm.expect(pm.response.json().name).to.eql(\"Edited Name\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/detail",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "detail"
+              ]
+            }
+          }
+        },
+        {
+          "name": "(clear cookie) logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload image - no token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401))",
+                  "pm.test(\"upload is false\", () => pm.expect(pm.response.json().upload).to.eql(false))",
+                  "pm.test(\"message has: Please login\", () => pm.expect(pm.response.json().message).to.include(\"Please login\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/uploadimg",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "uploadimg"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Admin: manage members",
+      "item": [
+        {
+          "name": "(clear cookie) logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List members - no token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401))",
+                  "pm.test(\"message has: Please login\", () => pm.expect(pm.response.json().message).to.include(\"Please login\"))",
+                  "pm.test(\"no data returned\", () => pm.expect(pm.response.json()).to.not.have.property(\"data\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List members - as member (forbidden)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403))",
+                  "pm.test(\"message has: Admin only\", () => pm.expect(pm.response.json().message).to.include(\"Admin only\"))",
+                  "pm.test(\"no data returned\", () => pm.expect(pm.response.json()).to.not.have.property(\"data\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List members - as admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
+                  "const j = pm.response.json()",
+                  "pm.test(\"has total and data\", () => { pm.expect(j.total).to.be.a(\"number\"); pm.expect(j.data).to.be.an(\"array\") })",
+                  "pm.test(\"no password_hash in list\", () => pm.expect(JSON.stringify(j)).to.not.include(\"password_hash\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List members - search ?q=",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
+                  "pm.test(\"finds the new account only\", () => pm.expect(pm.response.json().total).to.eql(1))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members?q={{newEmail}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members?q={{newEmail}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List members - bad role filter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400))",
+                  "pm.test(\"message has: role must be\", () => pm.expect(pm.response.json().message).to.include(\"role must be\"))",
+                  "pm.test(\"no data returned\", () => pm.expect(pm.response.json()).to.not.have.property(\"data\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members?role=boss",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members?role=boss"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Status - as member (forbidden)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403))",
+                  "pm.test(\"message has: Admin only\", () => pm.expect(pm.response.json().message).to.include(\"Admin only\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"suspended\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/{{newId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "{{newId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Status - invalid value",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400))",
+                  "pm.test(\"message has: status must be\", () => pm.expect(pm.response.json().message).to.include(\"status must be\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"banned\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/{{newId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "{{newId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Status - id is not a number",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400))",
+                  "pm.test(\"message has: id must be a number\", () => pm.expect(pm.response.json().message).to.include(\"id must be a number\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/abc/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "abc",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Status - member not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", () => pm.response.to.have.status(404))",
+                  "pm.test(\"message has: Member not found\", () => pm.expect(pm.response.json().message).to.include(\"Member not found\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/999999/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "999999",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Status - admin cannot suspend self",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400))",
+                  "pm.test(\"message has: cannot change your own\", () => pm.expect(pm.response.json().message).to.include(\"cannot change your own\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"suspended\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/{{adminId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "{{adminId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Status - suspend the new member",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
+                  "pm.test(\"status is suspended\", () => pm.expect(pm.response.json().status).to.eql(\"suspended\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"suspended\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/{{newId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "{{newId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Suspended member - login blocked",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403))",
+                  "pm.test(\"login is false\", () => pm.expect(pm.response.json().login).to.eql(false))",
+                  "pm.test(\"message has: suspended\", () => pm.expect(pm.response.json().message).to.include(\"suspended\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{newEmail}}\",\n  \"password\": \"12345678\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Suspended member - old token blocked",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403))",
+                  "pm.test(\"login is false\", () => pm.expect(pm.response.json().login).to.eql(false))",
+                  "pm.test(\"message has: suspended\", () => pm.expect(pm.response.json().message).to.include(\"suspended\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/detail",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "detail"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Status - reactivate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
+                  "pm.test(\"status is active\", () => pm.expect(pm.response.json().status).to.eql(\"active\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/{{newId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "{{newId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role - invalid value",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400))",
+                  "pm.test(\"message has: role must be\", () => pm.expect(pm.response.json().message).to.include(\"role must be\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"god\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/{{newId}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "{{newId}}",
+                "role"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role - admin cannot change own role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400))",
+                  "pm.test(\"message has: cannot change your own\", () => pm.expect(pm.response.json().message).to.include(\"cannot change your own\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"member\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/{{adminId}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "{{adminId}}",
+                "role"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role - make the new member admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
+                  "pm.test(\"role is admin\", () => pm.expect(pm.response.json().role).to.eql(\"admin\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/{{newId}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "{{newId}}",
+                "role"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role - new admin can list members",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
+                  "pm.test(\"gets member list\", () => pm.expect(pm.response.json().data).to.be.an(\"array\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role - demote back to member",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
+                  "pm.test(\"role is member\", () => pm.expect(pm.response.json().role).to.eql(\"member\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"member\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/{{newId}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "{{newId}}",
+                "role"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role - demoted member can no longer list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403))",
+                  "pm.test(\"message has: Admin only\", () => pm.expect(pm.response.json().message).to.include(\"Admin only\"))",
+                  "pm.test(\"no data returned\", () => pm.expect(pm.response.json()).to.not.have.property(\"data\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Email is case-insensitive",
+      "item": [
+        {
+          "name": "Register - mixed-case email",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('mixedEmail', 'autotest_Mixed_' + Date.now() + '@Example.COM')"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", () => pm.response.to.have.status(201))",
+                  "pm.test(\"regist is true\", () => pm.expect(pm.response.json().regist).to.eql(true))",
+                  "pm.test(\"stored in lower case\", () => pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get(\"mixedEmail\").toLowerCase()))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"  {{mixedEmail}}  \",\n  \"name\": \"Mixed Case\",\n  \"password\": \"12345678\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - lower-case email works",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
+                  "pm.test(\"login is true\", () => pm.expect(pm.response.json().login).to.eql(true))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{mixedEmail}}\",\n  \"password\": \"12345678\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "login"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Cart reads the member from the token",
+      "item": [
+        {
+          "name": "(clear cookie) logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cart - no token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cart"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cart - GET with token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))",
+                  "pm.test(\"not Unauthorized\", () => pm.expect(pm.response.json().message || \"\").to.not.include(\"Unauthorized\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cart"
+              ]
+            }
+          }
+        },
+        {
+          "name": "(clear cookie) logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cart - POST no token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 1,\n  \"qty\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cart"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cart - POST unknown product (auth ok)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", () => pm.response.to.have.status(404))",
+                  "pm.test(\"message has: Product not found\", () => pm.expect(pm.response.json().message).to.include(\"Product not found\"))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": 999999,\n  \"qty\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cart"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Orders - GET with token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -706,6 +2499,26 @@
     },
     {
       "key": "failMsg",
+      "value": ""
+    },
+    {
+      "key": "newId",
+      "value": ""
+    },
+    {
+      "key": "newToken",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "adminId",
+      "value": ""
+    },
+    {
+      "key": "mixedEmail",
       "value": ""
     }
   ]

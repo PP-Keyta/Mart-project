@@ -210,7 +210,7 @@ export async function putProduct(req, res) {
                         "is_active" = $8,
                         "updated_at" = NOW()
                     WHERE "id" = $9
-                    RETURNING *,
+                    RETURNING *
                 `,
             values: [
                 bodyData.code,

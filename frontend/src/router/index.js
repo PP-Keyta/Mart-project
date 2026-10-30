@@ -6,6 +6,7 @@ import Cart from '../views/Cart.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import Profile from '../views/Profile.vue'
+import AdminMembers from '../views/AdminMembers.vue'
 
 const routes = [
     {
@@ -34,6 +35,11 @@ const routes = [
         path:'/profile',
         name:'profile',
         component:Profile
+    },
+    {
+        path:'/admin/members',
+        name:'admin-members',
+        component:AdminMembers
     },
     {
         path:'/prodetail/:id',
