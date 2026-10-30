@@ -46,5 +46,5 @@ const fav = (p) => {
   const idx = favs.value.indexOf(p.id)
   if(idx > -1) favs.value.splice(idx, 1)
   else favs.value.push(p.id)
-}
+}//
 </script>

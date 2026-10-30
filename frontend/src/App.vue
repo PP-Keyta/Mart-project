@@ -23,7 +23,7 @@
   </header>
   
   <main class="wrap">
-    <!-- จุดแสดงผลเนื้อหาแต่ละหน้า -->
+    <!-- จุดแสดงผลเนื้อหาแต่ละหน้า //-->
     <router-view></router-view>
   </main>
 </template>
