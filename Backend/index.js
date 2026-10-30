@@ -8,7 +8,6 @@ import productsRoute from './routes/productRoute.js';
 import cartRoute from './routes/cartRoute.js';
 import memberRoute from './routes/memberRoute.js';
 import cookieParser from 'cookie-parser';
-import { readToken } from './middleware/auth.js';
 
 dotenv.config({ quiet: true });
 
@@ -24,7 +23,6 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
-app.use(readToken); // ใส่ req.user ให้ทุก route ถ้ามี Token ที่ถูกต้อง
 
 // ส่วนที่ พีทำ
 app.use("/img_pd",express.static("img_pd")) 
