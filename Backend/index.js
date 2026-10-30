@@ -6,6 +6,9 @@ import { testConnection } from './services/db.js';
 //พีรวมให้มีแค่ productRoute
 import productsRoute from './routes/productRoute.js';
 import cartRoute from './routes/cartRoute.js';
+import memberRoute from './routes/memberRoute.js';
+import cookieParser from 'cookie-parser';
+import { readToken } from './middleware/auth.js';
 
 dotenv.config({ quiet: true });
 
@@ -13,8 +16,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ---------- middleware ----------
-app.use(cors());
+// ส่ง Cookie ข้าม origin ได้ ต้องระบุ origin ของ Frontend และเปิด credentials
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173', 'http://127.0.0.1:4173'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,
+}));
 app.use(express.json());
+app.use(cookieParser());
+app.use(readToken); // ใส่ req.user ให้ทุก route ถ้ามี Token ที่ถูกต้อง
 
 // ส่วนที่ พีทำ
 app.use("/img_pd",express.static("img_pd")) 
@@ -38,9 +48,7 @@ app.get('/health', async (req, res) => {
 
 app.use('/api/', productsRoute);
 app.use('/api/',cartRoute);
-
-// TODO: mount the next feature routes here, e.g.
-// app.use('/api/auth', authRouter);  // import authRouter from './routes/auth.js'
+app.use('/api/', memberRoute);
 
 // ---------- 404 + error handling ----------
 app.use((req, res) => {

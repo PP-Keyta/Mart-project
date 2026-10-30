@@ -3,7 +3,7 @@ import database from "../services/db.js";
 //protect
 const TYPES = ['blind_box', 'whole_set', 'single'];
 const SORTS = {
-  newest: 'p.id ASC',
+  newest: 'p.id DESC',
   oldest: 'p.id ASC',
   price_asc: 'p.price ASC, p.id',
   price_desc: 'p.price DESC, p.id',
@@ -210,6 +210,7 @@ export async function putProduct(req, res) {
                         "is_active" = $8,
                         "updated_at" = NOW()
                     WHERE "id" = $9
+                    RETURNING *
                 `,
             values: [
                 bodyData.code,
