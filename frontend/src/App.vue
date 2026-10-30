@@ -31,6 +31,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 const router = useRouter()
 const cartCount = ref(0) // ตัวแปรเก็บจำนวนสินค้าในตะกร้า
@@ -46,12 +47,19 @@ const handleSearch = () => {
   }
 }
 
-// ฟังก์ชันดึงจำนวนสินค้าจาก localStorage
-const updateCartCount = () => {
-  const cart = JSON.parse(localStorage.getItem('kop_cart') || '[]')
-  // รวมจำนวนชิ้น (qty) ของสินค้าทุกรายการในตะกร้า
-  cartCount.value = cart.reduce((sum, item) => sum + item.qty, 0)
+// ฟังก์ชันดึงจำนวนสินค้าในตะกร้าจาก Backend (GET /api/cart) ถ้ายังไม่ได้ login จะได้ 401 ให้แสดง 0
+const updateCartCount = async () => {
+  try {
+    const res = await axios.get('http://localhost:3000/api/cart')
+    // รวมจำนวนชิ้น (qty) ของสินค้าทุกรายการในตะกร้า (ตะกร้าว่างไม่มี items)
+    cartCount.value = (res.data.items || []).reduce((sum, item) => sum + item.qty, 0)
+  } catch (error) {
+    cartCount.value = 0
+  }
 }
+
+// เปลี่ยนหน้าแล้วอัปเดตตัวเลขใหม่ (เช่น หลัง login / หลังสั่งซื้อ)
+router.afterEach(updateCartCount)
 
 onMounted(() => {
   updateCartCount()

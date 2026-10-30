@@ -71,32 +71,24 @@ onMounted(async () => {
 
 //const discount = computed(() => Math.round((1 - cur.value.price / cur.value.old) * 100))
 const go = (path) => router.push('/' + path)
-const add = (p, qty = 1, buy = false) => {
-  let cart = JSON.parse(localStorage.getItem('kop_cart') || '[]')
-  
-  const existingItem = cart.find(item => item.id === p.id)
-  if (existingItem) {
-    existingItem.qty += qty
-  } else {
-    cart.push({
-      id: p.id,
-      code: p.code,
-      name: p.name,
-      price: Number(p.price),
-      qty: qty,
-      sel: true
-    })
-  }
-  
-  localStorage.setItem('kop_cart', JSON.stringify(cart))
-  
-  // *** เพิ่มบรรทัดนี้ลงไป เพื่อสั่งให้ App.vue อัปเดตตัวเลข ***
-  window.dispatchEvent(new Event('cart-updated'))
-  
-  if(buy) {
-    router.push('/cart')
-  } else {
-    alert(`เพิ่ม ${p.name} ลงตะกร้าแล้ว!`) 
+const add = async (p, qty = 1, buy = false) => {
+  try {
+    // POST /api/cart : Backend รู้ว่าใคร login อยู่จาก Cookie token (ต้อง login ก่อน)
+    await axios.post('http://localhost:3000/api/cart', { product_id: p.id, qty: qty })
+    // สั่งให้ App.vue อัปเดตตัวเลขบนไอคอนตะกร้า
+    window.dispatchEvent(new Event('cart-updated'))
+    if(buy) {
+      router.push('/cart')
+    } else {
+      alert(`เพิ่ม ${p.name} ลงตะกร้าแล้ว!`)
+    }
+  } catch (error) {
+    if (error.response?.status === 401) {
+      alert('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้าลงตะกร้า')
+      router.push('/login')
+    } else {
+      alert(error.response?.data?.message || 'เพิ่มสินค้าลงตะกร้าไม่สำเร็จ')
+    }
   }
 }
 
