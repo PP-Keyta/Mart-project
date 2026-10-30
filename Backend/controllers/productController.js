@@ -24,7 +24,7 @@ export async function getAllProduct(req, res, next) {
     try {
         const { q, series, type, in_stock, sort = 'newest' } = req.query;
         const page = toInt(req.query.page) || 1;
-        const limit = Math.min(toInt(req.query.limit) || 12, 100);
+        const limit = Math.min(toInt(req.query.limit) || 50, 100);
 
         if (type && !TYPES.includes(type)) {
             return res.status(400).json({ error: `type must be one of: ${TYPES.join(', ')}` });
@@ -210,7 +210,7 @@ export async function putProduct(req, res) {
                         "is_active" = $8,
                         "updated_at" = NOW()
                     WHERE "id" = $9
-                    RETURNING *
+                    RETURNING *,
                 `,
             values: [
                 bodyData.code,

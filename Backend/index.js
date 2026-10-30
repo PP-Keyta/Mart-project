@@ -8,7 +8,6 @@ import productsRoute from './routes/productRoute.js';
 import cartRoute from './routes/cartRoute.js';
 import memberRoute from './routes/memberRoute.js';
 import cookieParser from 'cookie-parser';
-import { readToken } from './middleware/auth.js';
 
 dotenv.config({ quiet: true });
 
@@ -18,13 +17,12 @@ const PORT = process.env.PORT || 3000;
 // ---------- middleware ----------
 // ส่ง Cookie ข้าม origin ได้ ต้องระบุ origin ของ Frontend และเปิด credentials
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173', 'http://127.0.0.1:4173'],
+  origin: ['http://localhost','http://127.0.0.1','http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173', 'http://127.0.0.1:4173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
 }));
 app.use(express.json());
 app.use(cookieParser());
-app.use(readToken); // ใส่ req.user ให้ทุก route ถ้ามี Token ที่ถูกต้อง
 
 // ส่วนที่ พีทำ
 app.use("/img_pd",express.static("img_pd")) 

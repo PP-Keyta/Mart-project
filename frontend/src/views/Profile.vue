@@ -1,47 +1,173 @@
 <template>
     <!-- PROFILE -->
   <div class="profile">
-    <aside class="pside"><div class="av">🐰</div><h3 style="margin:4px 0">{{user.nick}}</h3><div style="color:var(--mute);margin-bottom:20px">{{user.email}}</div>
+    <aside class="pside">
+      <img v-if="imgUrl" :src="imgUrl" class="av" style="object-fit:cover" alt="รูปโปรไฟล์">
+      <div v-else class="av">🐰</div>
+      <h3 style="margin:4px 0">{{user.name}}</h3><div style="color:var(--mute);margin-bottom:20px">{{user.email}}</div>
       <button class="it" v-for="m in menu" :key="m" :class="{on:m===menuSel}" @click="menuSel=m">{{m}}</button>
+      <button class="it" v-if="user.role==='admin'" style="background:var(--pink-l);font-weight:700" @click="router.push('/admin/members')">จัดการสมาชิก (Admin)</button>
       <button class="it" style="background:var(--card);text-align:center;font-weight:700;margin-top:30px" @click="logout">ออกจากระบบ</button></aside>
     <div>
       <div class="pmain"><h2 style="margin-top:0">ข้อมูลส่วนตัว</h2>
         <div class="form"><div>
-          <label>ชื่อ-นามสกุล</label><input v-model="user.name" :disabled="!edit">
-          <label>อีเมล</label><input v-model="user.email" type="email" :disabled="!edit">
-          <label>เบอร์โทรศัพท์</label><input v-model="user.phone" :disabled="!edit">
-          <p><button class="btn" @click="edit=!edit; if(!edit) toast('บันทึกข้อมูลแล้ว')">{{edit?'บันทึกข้อมูล':'แก้ไขข้อมูล'}}</button></p></div>
-          <div class="pic"><div class="av">🐰</div><b>เปลี่ยนรูปโปรไฟล์</b></div></div></div>
+          <label>ชื่อ-นามสกุล</label><input v-model="form.name" :disabled="!edit">
+          <label>อีเมล (แก้ไขไม่ได้)</label><input :value="user.email" type="email" disabled>
+          <label>เบอร์โทรศัพท์</label><input v-model="form.phone" :disabled="!edit">
+          <label>ที่อยู่</label><input v-model="form.address" :disabled="!edit">
+          <p style="color:#c02a54" v-if="error">{{error}}</p>
+          <p><button class="btn" @click="onEditSave">{{edit?'บันทึกข้อมูล':'แก้ไขข้อมูล'}}</button>
+             <button class="btn ghost" v-if="edit" style="margin-left:8px" @click="cancelEdit">ยกเลิก</button></p></div>
+          <div class="pic">
+            <img v-if="imgUrl" :src="imgUrl" class="av" style="object-fit:cover" alt="รูปโปรไฟล์">
+            <div v-else class="av">🐰</div>
+            <b>เปลี่ยนรูปโปรไฟล์</b>
+            <p><input type="file" accept="image/*" @change="onFile" style="width:100%"></p>
+            <p><button class="btn" :disabled="!file || uploading" @click="uploadImage">{{uploading?'กำลังอัปโหลด...':'อัปโหลดรูป'}}</button></p>
+            <small>ไฟล์ jpg, png, webp, gif ขนาดไม่เกิน 2 MB</small>
+          </div></div></div>
       <h2>ที่อยู่จัดส่ง</h2>
-      <div class="addr"><div><span>👤 {{user.addr}}</span><button class="btn ghost" style="padding:6px 14px">แก้ไข</button></div>
+      <div class="addr"><div><span>👤 {{user.address || 'ยังไม่ได้ระบุที่อยู่'}}</span><button class="btn ghost" style="padding:6px 14px" @click="edit=true">แก้ไข</button></div>
         <div style="justify-content:center;cursor:pointer" @click="toast('เพิ่มที่อยู่ใหม่ (เดโม)')">＋ เพิ่มที่อยู่ใหม่</div></div>
       <h2>ประวัติการสั่งซื้อ</h2>
-      <div style="overflow-x:auto"><table><tr><th>เลขที่คำสั่งซื้อ</th><th>วันที่สั่งซื้อ</th><th>ยอดรวม</th><th>สถานะ</th></tr>
-        <tr v-for="o in orders" :key="o.id"><td>{{o.id}}</td><td>{{o.date}}</td><td>฿ {{fmt(o.total)}}</td><td><span class="st" :class="o.cls">{{o.st}}</span></td></tr></table></div>
+      <div style="overflow-x:auto">
+  <table>
+    <thead>
+      <tr>
+        <th>เลขที่คำสั่งซื้อ</th>
+        <th>วันที่สั่งซื้อ</th>
+        <th>ยอดรวม</th>
+        <th>สถานะ</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="o in orders" :key="o.id">
+        <td>{{o.id}}</td>
+        <td>{{o.date}}</td>
+        <td>฿ {{fmt(o.total)}}</td>
+        <td><span class="st" :class="o.cls">{{o.st}}</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { API, callApi } from '../api.js'
 
 const router = useRouter()
-
-const logout = () => {
-  localStorage.removeItem('isLoggedIn') // ลบสถานะการล็อคอิน
-  alert('ออกจากระบบแล้ว')
-  router.push('/login') // เด้งไปหน้าเข้าสู่ระบบ
-}
 
 const edit = ref(false)
 const menuSel = ref('ข้อมูลส่วนตัว')
 const menu = ['ข้อมูลส่วนตัว','ที่อยู่จัดส่ง','ประวัติการสั่งซื้อ','รายการโปรด']
 
-const user = ref({
-  nick: 'Chanopho', name: 'ชนกพร อยู่แก้ว', email: 'chanopho@example.com', 
-  phone: '081-234-5678', addr: '123/45 หมู่บ้านพฤกษา...'
+// ข้อมูลสมาชิกจาก Backend และข้อมูลในฟอร์มแก้ไข
+const user = ref({ name: '', email: '', phone: '', address: '', image: null, role: 'member' })
+const form = ref({ name: '', phone: '', address: '' })
+const error = ref('')
+const file = ref(null)
+const uploading = ref(false)
+
+// ที่อยู่รูปโปรไฟล์ (Backend เก็บไฟล์ไว้ที่ /img_mem)
+const imgUrl = computed(() => user.value.image ? `${API}/img_mem/${user.value.image}` : '')
+
+const fillForm = () => {
+  form.value = { name: user.value.name, phone: user.value.phone || '', address: user.value.address || '' }
+}
+
+// โหลดข้อมูลสมาชิกที่ล็อกอินอยู่ ถ้าไม่ได้ล็อกอินให้กลับไปหน้า Login
+onMounted(async () => {
+  try {
+    const data = await callApi('/api/members/detail')
+    if (!data.login) {
+      localStorage.removeItem('isLoggedIn')
+      router.push('/login')
+      return
+    }
+    user.value = data
+    fillForm()
+  }
+  catch (err) {
+    error.value = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'
+  }
 })
+
+// ปุ่ม แก้ไขข้อมูล / บันทึกข้อมูล
+const onEditSave = async () => {
+  if (!edit.value) {
+    edit.value = true
+    return
+  }
+  error.value = ''
+  if (!form.value.name.trim()) {
+    error.value = 'กรอกชื่อ-นามสกุล'
+    return
+  }
+  try {
+    // PUT /api/members
+    const data = await callApi('/api/members', 'PUT', form.value)
+    if (!data.update) {
+      error.value = data.message
+      return
+    }
+    user.value = data
+    fillForm()
+    edit.value = false
+    toast('บันทึกข้อมูลแล้ว')
+  }
+  catch (err) {
+    error.value = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'
+  }
+}
+
+const cancelEdit = () => {
+  fillForm()
+  error.value = ''
+  edit.value = false
+}
+
+// เลือกไฟล์รูป แล้วอัปโหลด (POST /api/members/uploadimg ส่งแบบ FormData ชื่อ field = file)
+const onFile = (e) => {
+  file.value = e.target.files[0] || null
+}
+
+const uploadImage = async () => {
+  error.value = ''
+  uploading.value = true
+  try {
+    const fd = new FormData()
+    fd.append('file', file.value)
+    const res = await fetch(API + '/api/members/uploadimg', { method: 'POST', credentials: 'include', body: fd })
+    const data = await res.json()
+    if (!data.upload) {
+      error.value = data.message
+      return
+    }
+    user.value.image = data.image
+    file.value = null
+    toast('อัปโหลดรูปโปรไฟล์แล้ว')
+  }
+  catch (err) {
+    error.value = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'
+  }
+  finally {
+    uploading.value = false
+  }
+}
+
+const logout = async () => {
+  try {
+    await callApi('/api/members/logout') // ให้ Backend ล้าง Cookie token
+  }
+  catch (err) { /* ออกจากระบบฝั่งหน้าเว็บต่อไป */ }
+  localStorage.removeItem('isLoggedIn') // ลบสถานะการล็อคอิน
+  alert('ออกจากระบบแล้ว')
+  router.push('/login') // เด้งไปหน้าเข้าสู่ระบบ
+}
 
 const orders = ref([
   { id: '#PMT2025003', date: '12 ก.ค. 2569', total: 1860, st: 'จัดส่งแล้ว', cls: 'ok' },

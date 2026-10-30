@@ -1,0 +1,130 @@
+<template>
+  <div class="pmain" style="margin:20px 0 40px">
+    <h2 style="margin-top:0">จัดการสมาชิก (Admin)</h2>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px">
+      <input v-model="q" placeholder="ค้นหาชื่อหรืออีเมล" @keyup.enter="load" style="flex:1; min-width:200px; padding:10px 14px; border-radius:12px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font:inherit">
+      <select v-model="role" @change="load" style="padding:10px 14px; border-radius:12px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font:inherit">
+        <option value="">ทุกบทบาท</option>
+        <option value="member">member</option>
+        <option value="admin">admin</option>
+      </select>
+      <select v-model="status" @change="load" style="padding:10px 14px; border-radius:12px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font:inherit">
+        <option value="">ทุกสถานะ</option>
+        <option value="active">active</option>
+        <option value="suspended">suspended</option>
+      </select>
+      <button class="btn" @click="load">ค้นหา</button>
+    </div>
+
+    <p v-if="error" style="color:#c02a54">{{ error }}</p>
+    <p style="color:var(--mute)">สมาชิกทั้งหมด {{ members.length }} คน</p>
+
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>ID</th><th>อีเมล</th><th>ชื่อ</th><th>บทบาท</th><th>สถานะ</th><th>สมัครเมื่อ</th><th>จัดการ</th></tr></thead>
+        <tbody>
+        <tr v-for="m in members" :key="m.id">
+          <td>{{ m.id }}</td>
+          <td>{{ m.email }}</td>
+          <td>{{ m.name }}</td>
+          <td><span class="st" :class="m.role === 'admin' ? 'wait' : ''">{{ m.role }}</span></td>
+          <td><span class="st" :class="m.status === 'active' ? 'ok' : 'no'">{{ m.status }}</span></td>
+          <td>{{ new Date(m.created_at).toLocaleDateString('th-TH') }}</td>
+          <td style="white-space:nowrap">
+            <span v-if="m.id === me.id" style="color:var(--mute)">(คุณ)</span>
+            <template v-else>
+              <button class="btn ghost" style="padding:6px 12px" @click="changeStatus(m)">
+                {{ m.status === 'active' ? 'ระงับ' : 'เปิดใช้งาน' }}
+              </button>
+              <button class="btn ghost" style="padding:6px 12px; margin-left:6px" @click="changeRole(m)">
+                {{ m.role === 'admin' ? 'ลดเป็น member' : 'ตั้งเป็น admin' }}
+              </button>
+            </template>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <p><button class="btn ghost" @click="router.push('/profile')">กลับหน้าโปรไฟล์</button></p>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { callApi } from '../api.js'
+
+const router = useRouter()
+
+const members = ref([])
+const me = ref({})
+const q = ref('')
+const role = ref('')
+const status = ref('')
+const error = ref('')
+
+// โหลดรายชื่อสมาชิก (GET /api/members) เฉพาะ admin
+const load = async () => {
+  error.value = ''
+  const params = new URLSearchParams()
+  if (q.value) params.set('q', q.value)
+  if (role.value) params.set('role', role.value)
+  if (status.value) params.set('status', status.value)
+  try {
+    const data = await callApi('/api/members?' + params.toString())
+    if (!data.data) {
+      error.value = data.message
+      return
+    }
+    members.value = data.data
+  }
+  catch (err) {
+    error.value = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'
+  }
+}
+
+// ตรวจว่าเป็น admin ก่อน ถ้าไม่ใช่ให้กลับไปหน้าอื่น (Backend ตรวจสิทธิ์ซ้ำอีกชั้นเสมอ)
+onMounted(async () => {
+  try {
+    const data = await callApi('/api/members/detail')
+    if (!data.login) {
+      router.push('/login')
+      return
+    }
+    if (data.role !== 'admin') {
+      router.push('/profile')
+      return
+    }
+    me.value = data
+    await load()
+  }
+  catch (err) {
+    error.value = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'
+  }
+})
+
+// PUT /api/members/:id/status
+const changeStatus = async (m) => {
+  const next = m.status === 'active' ? 'suspended' : 'active'
+  if (!confirm(`เปลี่ยนสถานะของ ${m.email} เป็น ${next} ?`)) return
+  const data = await callApi(`/api/members/${m.id}/status`, 'PUT', { status: next })
+  if (data.status !== next) {
+    error.value = data.message
+    return
+  }
+  m.status = data.status
+}
+
+// PUT /api/members/:id/role
+const changeRole = async (m) => {
+  const next = m.role === 'admin' ? 'member' : 'admin'
+  if (!confirm(`เปลี่ยนบทบาทของ ${m.email} เป็น ${next} ?`)) return
+  const data = await callApi(`/api/members/${m.id}/role`, 'PUT', { role: next })
+  if (data.role !== next) {
+    error.value = data.message
+    return
+  }
+  m.role = data.role
+}
+</script>
