@@ -76,12 +76,19 @@ onUnmounted(() => {
   window.removeEventListener('cart-updated', updateCartCount)
 })
 
-// ฟังก์ชันกดปุ่มโปรไฟล์ (ที่คุณเคยทำไว้)
-const handleProfileClick = () => {
-  const isLoggedIn = localStorage.getItem('isLoggedIn')
-  if (isLoggedIn === 'true') {
-    router.push('/profile')
-  } else {
+const handleProfileClick = async () => {
+  try {
+    // เช็กกับ Backend เพื่อความชัวร์ว่า Token ใน Cookie ยังใช้งานได้จริงไหม
+    const res = await callApi('/api/members/detail')
+    if (res.login) {
+      localStorage.setItem('isLoggedIn', 'true')
+      router.push('/profile')
+    } else {
+      localStorage.removeItem('isLoggedIn')
+      router.push('/login')
+    }
+  } catch (err) {
+    localStorage.removeItem('isLoggedIn')
     router.push('/login')
   }
 }

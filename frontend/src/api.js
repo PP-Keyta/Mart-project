@@ -12,14 +12,10 @@ export const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 export async function callApi(path, method = 'GET', body) {
   const res = await fetch(API + path, {
     method,
-    // ถ้ามีข้อมูลส่งไปด้วย ต้องบอก Backend ว่าเป็น JSON
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    credentials: 'include', // ต้องมี ไม่งั้น Cookie token จะไม่ถูกส่ง/เก็บ (ข้าม origin ระหว่าง 5173 กับ 3000)
+    credentials: 'include', // <--- สำคัญมาก ต้องมีบรรทัดนี้เพื่อให้ส่ง Cookie token ไปได้
     body: body ? JSON.stringify(body) : undefined
   })
-  // 204 No Content (เช่น ลบสินค้าสำเร็จ) ไม่มี body ให้ส่ง object ว่างกลับ
   if (res.status === 204) return { ok: true }
-  // Backend ตอบเป็น JSON เสมอ (มี message ทั้งกรณีสำเร็จและผิดพลาด)
-  // จึงอ่าน JSON ทุกครั้ง แล้วให้หน้าที่เรียกเช็คจาก login/regist/update/upload ใน body
   return res.json()
 }
